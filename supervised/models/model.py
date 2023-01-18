@@ -62,10 +62,7 @@ class sleep_model(nn.Module):
 
         self.epoch_len = epoch_len
         self.base_encoder = encoder(input_channels)
-        self.criterion = nn.CrossEntropyLoss()
 
     def forward(self, x, y):
         x = self.base_encoder(x[:, (self.epoch_len // 2), :, :])
-        y = y[:, (self.epoch_len // 2)]
-        loss = self.criterion(x, y)
-        return loss
+        return x

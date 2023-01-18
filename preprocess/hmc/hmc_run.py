@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import pandas as pd
 from tqdm import tqdm
 
 import mne
@@ -116,21 +115,16 @@ hmc_windows_dataset = create_windows_from_events(
                         window_stride_samples=window_size_samples,
                         preload=False,
                         mapping=mapping,
-                        n_jobs=-1
                     )
 preprocess(hmc_windows_dataset, [Preprocessor(zscore)])
 
-metadata_df = pd.DataFrame(columns=['subject_id', 'epoch_length'])
 HMC_SAVE_PATH = os.path.join(os.path.split(HMC_PATH)[0], 'subjects_data')
-
 if not os.path.exists(HMC_SAVE_PATH):
     os.makedirs(HMC_SAVE_PATH, exist_ok=True)
 
 for windows_subject in tqdm(hmc_windows_dataset.datasets, desc="HMC dataset preprocessing ..."):
-    metadata_df = metadata_df.append({'subject_id': windows_subject.description['subject_id'], 'epoch_length': len(windows_subject)}, 
-                                     ignore_index=True)
-
     hmc_subject_data = __get_epochs(windows_subject)
+
     subjects_save_path = os.path.join(HMC_SAVE_PATH, f"{windows_subject.description['subject_id']:03d}.npz")
     np.savez(subjects_save_path, 
              eeg=hmc_subject_data[:, :4], 
@@ -138,7 +132,8 @@ for windows_subject in tqdm(hmc_windows_dataset.datasets, desc="HMC dataset prep
              eog=hmc_subject_data[:, 5:7],
              emog=hmc_subject_data[:, 4:7],
              ecg=hmc_subject_data[:, 7:],
-             y=windows_subject.y
+             y=windows_subject.y,
+             subject_id=windows_subject.description['subject_id'],
+             epoch_length=len(windows_subject),
             )
-metadata_df.to_csv(os.path.join(os.path.split(HMC_PATH)[0], 'metadata.csv'))
     

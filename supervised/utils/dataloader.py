@@ -4,36 +4,18 @@ __email__ = "likith012@gmail.com"
 
 import numpy as np
 import torch
-
 from torch.utils.data import Dataset
 
-class pretext_data(Dataset):
 
-    def __init__(self, config, filepath):
-        super(pretext_data, self).__init__()
-
-        self.file_path = filepath
-        self.idx = np.array(range(len(self.file_path)))
-        self.config = config
-
-    def __len__(self):
-        return len(self.file_path)
-
-    def __getitem__(self, index):
-
-        path = self.file_path[index]
-        data = np.load(path)
-        pos = torch.tensor(data["pos"][:, :1, :])  # (7, 1, 3000)
-        y = torch.tensor(data["y"])  # (7,)
-
-        return pos, y  # (7, 2, 3000)
-
-
-class TuneDataset(Dataset):
+class distillDataset(Dataset):
     """Dataset for train and test"""
 
-    def __init__(self, subjects):
+    def __init__(self, subjects, metadata_df, modality, epoch_len):
         self.subjects = subjects
+        self.metadata = metadata_df
+        self.epoch_len = epoch_len
+        self.modality = modality
+
         self._add_subjects()
 
     def __getitem__(self, index):
@@ -53,3 +35,22 @@ class TuneDataset(Dataset):
             self.y.append(subject["y"])
         self.X = np.concatenate(self.X, axis=0)
         self.y = np.concatenate(self.y, axis=0)
+
+
+
+class distill(Dataset):
+    """Dataset for train and test"""
+
+    def __init__(self, filepath):
+        super(distill, self).__init__()
+
+        self.file_path = filepath
+
+    def __len__(self):
+        return len(self.file_path)
+
+    def __getitem__(self, index):
+
+        path = self.file_path[index]
+        data = np.load(path)
+        return data['X'], data['y']
