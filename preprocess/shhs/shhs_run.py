@@ -10,7 +10,7 @@ rng = np.random.RandomState(SEED)
 
 # ARGS
 HALF_WINDOW = 3 # Epoch length is HALF_WINDOW*2 + 1
-NUM_CORES = 6
+NUM_CORES = 4
 AVAILABLE_MODALITY = ['eeg', 'ecg', 'eog', 'emg', 'emog']
 
 parser = argparse.ArgumentParser()
@@ -52,7 +52,7 @@ def preprocess_subjects(subject_paths, save_path, k, N):
             cnt+=1
 
 p_list = []
-for k in NUM_CORES:
+for k in range(NUM_CORES):
     process = Process(target=preprocess_subjects, args=(train_subjects, TRAIN_PATH, k, NUM_CORES))
     process.start()
     p_list.append(process)
@@ -61,7 +61,7 @@ for i in p_list:
     i.join()
 
 p_list = []
-for k in NUM_CORES:
+for k in range(NUM_CORES):
     process = Process(target=preprocess_subjects, args=(test_subjects, TEST_PATH, k, NUM_CORES))
     process.start()
     p_list.append(process)

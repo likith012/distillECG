@@ -8,9 +8,10 @@ from torch.utils.data import Dataset
 class distillDataset(Dataset):
     """Dataset for train and test"""
 
-    def __init__(self, filepath):
+    def __init__(self, filepath, modality):
         super(distillDataset, self).__init__()
         self.file_path = filepath
+        self.modality = modality
 
     def __len__(self):
         return len(self.file_path)
