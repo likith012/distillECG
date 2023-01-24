@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from multiprocessing import Process
 
 import mne
 import xml.etree.ElementTree as ET
@@ -19,6 +20,7 @@ SHHS_PATH = '/scratch/shhs/edfs/shhs1'
 SHHS_EVENTS_PATH = '/scratch/shhs/annotations-events-profusion/shhs1'
 SELECTED_SUBJECTS_PATH = './preprocess/shhs/selected_shhs1.txt'
 SHHS_SAVE_PATH = os.path.join(os.path.split(os.path.split(SHHS_PATH)[0])[0], 'subjects_data')
+NUM_CORES = 10
 
 if not os.path.exists(SHHS_SAVE_PATH):
     os.makedirs(SHHS_SAVE_PATH, exist_ok=True)
@@ -44,7 +46,6 @@ channel_mapping = {
     'ecg': ['ECG'],
     'eog': ['EOG(L)', 'EOG(R)'],
     'emg': ['EMG'],
-    'emog': ['EOG(L)', 'EOG(R)', 'EMG'],
 }
 
 class SHHSSleepStaging(BaseConcatDataset):
@@ -162,9 +163,19 @@ def __get_channels(raw, ann):
     return channels_data, windows_subject_dataset.datasets[0].description['subject_id']
 
 
-if __name__ == "__main__":
-    for raw, ann in tqdm(zip(raw_paths, ann_paths), desc="SHHS dataset preprocessing ...", total=len(raw_paths)):
+def preprocess(raw_paths, ann_paths, k, N):
+    raw_paths_core = [f for i, f in enumerate(raw_paths) if i%N==k]
+    ann_paths_core = [f for i, f in enumerate(ann_paths) if i%N==k]
+    for raw, ann in tqdm(zip(raw_paths_core, ann_paths_core), desc="SHHS dataset preprocessing ...", total=len(raw_paths_core)):
         channels_data, subject_num = __get_channels(raw, ann)    
         subjects_save_path = os.path.join(SHHS_SAVE_PATH, f"{subject_num}.npz")
         np.savez(subjects_save_path, **channels_data)
+
+p_list = []
+for k in range(NUM_CORES):
+    process = Process(target=preprocess, args=(raw_paths, ann_paths, k, NUM_CORES))
+    process.start()
+    p_list.append(process)
+for i in p_list:
+    i.join()
     

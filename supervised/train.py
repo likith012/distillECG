@@ -52,8 +52,8 @@ print(f"Train files: {len(TRAIN_EPOCH_FILES)} \n")
 print(f"Test files: {len(TEST_EPOCH_FILES)} \n")
 print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-train_dataset = distillDataset(TRAIN_EPOCH_FILES)
-test_dataset = distillDataset(TEST_EPOCH_FILES)
+train_dataset = distillDataset(TRAIN_EPOCH_FILES, MODALITY)
+test_dataset = distillDataset(TEST_EPOCH_FILES, MODALITY)
 
 train_loader = DataLoader(
     train_dataset,
