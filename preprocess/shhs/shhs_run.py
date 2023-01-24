@@ -23,7 +23,6 @@ DATASET_SUBJECTS = [os.path.join(args.dir, 'subjects_data', f) for f in DATASET_
 TRAIN_PATH = os.path.join(args.dir, f'train_{HALF_WINDOW}') 
 TEST_PATH = os.path.join(args.dir, f'test_{HALF_WINDOW}')
 
-dataset_subjects_data = [np.load(f) for f in DATASET_SUBJECTS]
 train_subjects = rng.choice(DATASET_SUBJECTS, int(len(DATASET_SUBJECTS)*0.8), replace=False)
 test_subjects = list(set(DATASET_SUBJECTS) - set(train_subjects))
 
@@ -56,7 +55,6 @@ for k in range(NUM_CORES):
     process = Process(target=preprocess_subjects, args=(train_subjects, TRAIN_PATH, k, NUM_CORES))
     process.start()
     p_list.append(process)
-
 for i in p_list:
     i.join()
 
@@ -65,6 +63,5 @@ for k in range(NUM_CORES):
     process = Process(target=preprocess_subjects, args=(test_subjects, TEST_PATH, k, NUM_CORES))
     process.start()
     p_list.append(process)
-
 for i in p_list:
     i.join()

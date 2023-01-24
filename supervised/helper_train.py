@@ -1,5 +1,4 @@
 import os
-import time, math
 import torch
 import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -13,15 +12,20 @@ from torch.cuda.amp import GradScaler
 
 class distill_train(nn.Module):
 
-    def __init__(self, EXPERIMENT_NAME, train_loader, test_loader, wandb_logger, epoch_len, input_channels):
+    def __init__(self, EXPERIMENT_NAME, SAVE_PATH, train_loader, test_loader, wandb_logger, epoch_len, input_channels):
         super(distill_train, self).__init__()
 
         self.epoch_len = epoch_len
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = sleep_model(input_channels, self.epoch_len).to(self.device)
+        self.exp_name = EXPERIMENT_NAME
+        self.save_path = SAVE_PATH
 
         self.weight_decay = 3e-5
         self.lr = 0.001
+        self.num_epochs = 60
+
+        self.best_accuracy = 0
         self.loggr = wandb_logger
         self.train_loader = train_loader
         self.test_loader = test_loader
@@ -32,8 +36,12 @@ class distill_train(nn.Module):
             betas=(0.9, 0.99),
             weight_decay=self.weight_decay,
         )
-        self.num_epochs = 60
-
+        self.scheduler = ReduceLROnPlateau(self.optimizer,
+                                           mode="min",
+                                           patience=5,
+                                           factor=0.2
+                                           )
+        
     def train_dataloader(self):
         return self.train_loader
 
@@ -46,7 +54,6 @@ class distill_train(nn.Module):
         y = y[:, (self.epoch_len // 2)]
         outs = self.model(X)
         loss = self.criterion(outs, y)
-
         return loss, outs, y
 
     def testing_step(self, batch, batch_idx):
@@ -96,6 +103,7 @@ class distill_train(nn.Module):
                 'Loss test': epoch_loss.item(),
                 'Epoch': epoch
             })
+        return acc
 
     def fit(self):
         scaler = GradScaler()
@@ -135,4 +143,16 @@ class distill_train(nn.Module):
                     test_outputs['preds'].append(softmax(outs, dim=1))
                     test_outputs['targets'].append(y)
 
-            self.on_test_epoch_end(test_outputs, epoch)
+            acc = self.on_test_epoch_end(test_outputs, epoch)
+            if self.best_accuracy < acc:
+                checkpoint = {
+                        'model': self.model.state_dict(),
+                        'epoch': epoch,
+                        'accuracy': acc,
+                    }
+                torch.save(
+                    checkpoint,
+                    os.path.join(self.save_path, self.exp_name + "_best.pt"),
+                    )
+                self.loggr.save(os.path.join(self.save_path, self.exp_name + "_best.pt"))
+                print(f"Best weights saved with accuracy: {acc} at epoch: {epoch}")

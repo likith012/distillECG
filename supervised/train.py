@@ -1,6 +1,5 @@
 import wandb, os
 import numpy as np
-import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 
@@ -15,8 +14,8 @@ torch.backends.cudnn.benchmark = False
 np.random.seed(SEED)
 
 DATASET = 'shhs'
-EXPERIMENT_NAME = f'supervised_{DATASET}'
 MODALITY = 'eeg'
+EXPERIMENT_NAME = f'supervised_{DATASET}+{MODALITY}'
 INPUT_CHANNELS = 4
 BATCH_SIZE = 256
 EPOCH_LEN = 7
@@ -49,8 +48,8 @@ TEST_EPOCH_FILES = [os.path.join(TEST_PATH, f) for f in os.listdir(TEST_PATH)]
 
 
 print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-print(f"Train: {len(TRAIN_EPOCH_FILES)} \n")
-print(f"Test: {len(TEST_EPOCH_FILES)} \n")
+print(f"Train files: {len(TRAIN_EPOCH_FILES)} \n")
+print(f"Test files: {len(TEST_EPOCH_FILES)} \n")
 print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
 train_dataset = distillDataset(TRAIN_EPOCH_FILES)
@@ -69,7 +68,7 @@ test_loader = DataLoader(
     num_workers=4,
 )
 
-model = distill_train(EXPERIMENT_NAME, train_loader, test_loader, wandb, EPOCH_LEN, INPUT_CHANNELS)
+model = distill_train(EXPERIMENT_NAME, SAVE_PATH, train_loader, test_loader, wandb, EPOCH_LEN, INPUT_CHANNELS)
 wandb.watch([model], log="all", log_freq=500)
 
 model.fit()
