@@ -163,7 +163,7 @@ def __get_channels(raw, ann):
     return channels_data, windows_subject_dataset.datasets[0].description['subject_id']
 
 
-def preprocess(raw_paths, ann_paths, k, N):
+def preprocess_dataset(raw_paths, ann_paths, k, N):
     raw_paths_core = [f for i, f in enumerate(raw_paths) if i%N==k]
     ann_paths_core = [f for i, f in enumerate(ann_paths) if i%N==k]
     for raw, ann in tqdm(zip(raw_paths_core, ann_paths_core), desc="SHHS dataset preprocessing ...", total=len(raw_paths_core)):
@@ -173,7 +173,7 @@ def preprocess(raw_paths, ann_paths, k, N):
 
 p_list = []
 for k in range(NUM_CORES):
-    process = Process(target=preprocess, args=(raw_paths, ann_paths, k, NUM_CORES))
+    process = Process(target=preprocess_dataset, args=(raw_paths, ann_paths, k, NUM_CORES))
     process.start()
     p_list.append(process)
 for i in p_list:
