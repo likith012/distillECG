@@ -68,6 +68,8 @@ class distill_train(nn.Module):
         epoch_preds = torch.vstack([x for x in outputs["preds"]])
         epoch_targets = torch.hstack([x for x in outputs["targets"]])
         epoch_loss = torch.hstack([torch.tensor(x) for x in outputs['loss']]).mean()
+
+        self.scheduler.step(epoch_loss)
         
         class_preds = epoch_preds.argmax(dim=1)
         acc = Accuracy(task="multiclass", num_classes=5).to(self.device)(epoch_preds, epoch_targets)
@@ -82,6 +84,7 @@ class distill_train(nn.Module):
                 'Acc train': acc,
                 'Loss train': epoch_loss.item(),
                 'Epoch': epoch
+                'LR': self.scheduler.optimizer.param_groups[0]["lr"],
             })
 
     def on_test_epoch_end(self, outputs, epoch):
