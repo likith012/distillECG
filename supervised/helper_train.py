@@ -83,7 +83,7 @@ class distill_train(nn.Module):
                 'Bal Acc train': bal_acc,
                 'Acc train': acc,
                 'Loss train': epoch_loss.item(),
-                'Epoch': epoch
+                'Epoch': epoch,
                 'LR': self.scheduler.optimizer.param_groups[0]["lr"],
             })
 
