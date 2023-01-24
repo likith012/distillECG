@@ -20,8 +20,8 @@ args = parser.parse_args()
 
 DATASET_SUBJECTS = sorted(os.listdir(os.path.join(args.dir, 'subjects_data')))
 DATASET_SUBJECTS = [os.path.join(args.dir, 'subjects_data', f) for f in DATASET_SUBJECTS]
-TRAIN_PATH = os.path.join(args.dir, f'train_{HALF_WINDOW}') 
-TEST_PATH = os.path.join(args.dir, f'test_{HALF_WINDOW}')
+TRAIN_PATH = os.path.join(args.dir, f'train_{HALF_WINDOW*2 +1}') 
+TEST_PATH = os.path.join(args.dir, f'test_{HALF_WINDOW*2 + 1}')
 
 train_subjects = rng.choice(DATASET_SUBJECTS, int(len(DATASET_SUBJECTS)*0.8), replace=False)
 test_subjects = list(set(DATASET_SUBJECTS) - set(train_subjects))
