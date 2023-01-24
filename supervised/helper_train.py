@@ -13,13 +13,12 @@ from torch.cuda.amp import GradScaler
 
 class distill_train(nn.Module):
 
-    def __init__(self, EXPERIMENT_NAME, train_loader, test_loader, wandb_logger, epoch_len, modality):
+    def __init__(self, EXPERIMENT_NAME, train_loader, test_loader, wandb_logger, epoch_len, input_channels):
         super(distill_train, self).__init__()
 
         self.epoch_len = epoch_len
-        self.modality = modality
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = sleep_model(4, self.epoch_len).to(self.device)
+        self.model = sleep_model(input_channels, self.epoch_len).to(self.device)
 
         self.weight_decay = 3e-5
         self.lr = 0.001
@@ -59,7 +58,6 @@ class distill_train(nn.Module):
         return loss, outs, y  
 
     def on_train_epoch_end(self, outputs, epoch):
-
         epoch_preds = torch.vstack([x for x in outputs["preds"]])
         epoch_targets = torch.hstack([x for x in outputs["targets"]])
         epoch_loss = torch.hstack([torch.tensor(x) for x in outputs['loss']]).mean()
@@ -80,7 +78,6 @@ class distill_train(nn.Module):
             })
 
     def on_test_epoch_end(self, outputs, epoch):
-
         epoch_preds = torch.vstack([x for x in outputs["preds"]])
         epoch_targets = torch.hstack([x for x in outputs["targets"]])
         epoch_loss = torch.hstack([torch.tensor(x) for x in outputs['loss']]).mean()

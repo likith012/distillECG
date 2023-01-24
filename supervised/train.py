@@ -13,19 +13,18 @@ torch.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 np.random.seed(SEED)
-rng = np.random.RandomState(SEED)
 
-
-EXPERIMENT_NAME = 'supervised_hmc'
+DATASET = 'shhs'
+EXPERIMENT_NAME = f'supervised_{DATASET}'
 MODALITY = 'eeg'
-DO_KFOLD = False
+INPUT_CHANNELS = 4
 BATCH_SIZE = 256
 EPOCH_LEN = 7
 
-DATASET_PATH = '/scratch/hmc'
+DATASET_PATH = f'/scratch/{DATASET}'
 DATASET_SUBJECTS = os.listdir(os.path.join(DATASET_PATH, 'subjects_data'))
 SAVE_PATH = './saved_weights'
-
+if not os.path.exists(SAVE_PATH): os.makedirs(SAVE_PATH, exist_ok=True)
 
 wandb = wandb.init(
     project="distillECG",
@@ -33,10 +32,6 @@ wandb = wandb.init(
     save_code=False,
     entity="sleep-staging",
 )
-
-if not os.path.exists(SAVE_PATH):
-    os.makedirs(SAVE_PATH, exist_ok=True)
-
 wandb.save("./supervised/utils/*")
 wandb.save("./supervised/models/*")
 wandb.save("./supervised/helper_train.py")
@@ -46,40 +41,36 @@ DATASET_SUBJECTS.sort(key=natural_keys)
 DATASET_SUBJECTS = [os.path.join(DATASET_PATH, 'subjects_data', f) for f in DATASET_SUBJECTS]
 dataset_subjects_data = [np.load(f) for f in DATASET_SUBJECTS]
 
-if DO_KFOLD:
-    pass
+# load files
+TRAIN_PATH = os.path.join(DATASET_PATH, f'train_{EPOCH_LEN}') 
+TEST_PATH = os.path.join(DATASET_PATH, f'test_{EPOCH_LEN}')
+TRAIN_EPOCH_FILES = [os.path.join(TRAIN_PATH, f) for f in os.listdir(TRAIN_PATH)]
+TEST_EPOCH_FILES = [os.path.join(TEST_PATH, f) for f in os.listdir(TEST_PATH)]
 
-else:
 
-    sub_train = rng.choice(DATASET_SUBJECTS, int(len(DATASET_SUBJECTS)*0.8), replace=False)
-    sub_test = sorted(list(set(DATASET_SUBJECTS) - set(sub_train)))
+print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+print(f"Train: {len(TRAIN_EPOCH_FILES)} \n")
+print(f"Test: {len(TEST_EPOCH_FILES)} \n")
+print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-    print(f"Pretext: {sub_train} \n")
-    print(f"Test: {sub_test} \n")
-    print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+train_dataset = distillDataset(TRAIN_EPOCH_FILES)
+test_dataset = distillDataset(TEST_EPOCH_FILES)
 
-    TRAIN_FILES = [np.load(f) for f in sub_train]
-    TEST_FILES = [np.load(f) for f in sub_test]
+train_loader = DataLoader(
+    train_dataset,
+    batch_size=BATCH_SIZE,
+    shuffle=True,
+    num_workers=4,
+)
+test_loader = DataLoader(
+    test_dataset,
+    batch_size=BATCH_SIZE,
+    shuffle=False,
+    num_workers=4,
+)
 
-    train_dataset = distillDataset(TRAIN_FILES, metadata_df,  MODALITY, epoch_len=EPOCH_LEN)
-    test_dataset = distillDataset(TEST_FILES, metadata_df,  MODALITY, epoch_len=EPOCH_LEN)
+model = distill_train(EXPERIMENT_NAME, train_loader, test_loader, wandb, EPOCH_LEN, INPUT_CHANNELS)
+wandb.watch([model], log="all", log_freq=500)
 
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=BATCH_SIZE,
-        shuffle=True,
-        num_workers=8,
-    )
-    test_loader = DataLoader(
-        test_dataset,
-        batch_size=BATCH_SIZE,
-        shuffle=False,
-        num_workers=8,
-    )
-
-    model = distill_train(EXPERIMENT_NAME, train_loader, test_loader, wandb, EPOCH_LEN, MODALITY)
-    wandb.watch([model], log="all", log_freq=500)
-
-    model.fit()
-    wandb.finish()
+model.fit()
+wandb.finish()

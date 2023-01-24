@@ -16,7 +16,7 @@ mne.set_log_level(verbose='WARNING')
 
 
 SHHS_PATH = '/scratch/shhs/edfs/shhs1'
-SHHS_EVENTS_PATH = '/scratch/shhs/annotations-events-profusion\shhs1'
+SHHS_EVENTS_PATH = '/scratch/shhs/annotations-events-profusion/shhs1'
 SELECTED_SUBJECTS_PATH = './preprocess/shhs/selected_shhs1.txt'
 SHHS_SAVE_PATH = os.path.join(os.path.split(os.path.split(SHHS_PATH)[0])[0], 'subjects_data')
 
