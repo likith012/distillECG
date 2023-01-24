@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from multiprocessing import Process
+import multiprocessing
 
 import mne
 import xml.etree.ElementTree as ET
@@ -20,7 +20,7 @@ SHHS_PATH = '/scratch/shhs/edfs/shhs1'
 SHHS_EVENTS_PATH = '/scratch/shhs/annotations-events-profusion/shhs1'
 SELECTED_SUBJECTS_PATH = './preprocess/shhs/selected_shhs1.txt'
 SHHS_SAVE_PATH = os.path.join(os.path.split(os.path.split(SHHS_PATH)[0])[0], 'subjects_data')
-NUM_CORES = 10
+NUM_CORES = multiprocessing.cpu_count()
 
 if not os.path.exists(SHHS_SAVE_PATH):
     os.makedirs(SHHS_SAVE_PATH, exist_ok=True)
@@ -173,7 +173,7 @@ def preprocess_dataset(raw_paths, ann_paths, k, N):
 
 p_list = []
 for k in range(NUM_CORES):
-    process = Process(target=preprocess_dataset, args=(raw_paths, ann_paths, k, NUM_CORES))
+    process = multiprocessing.Process(target=preprocess_dataset, args=(raw_paths, ann_paths, k, NUM_CORES))
     process.start()
     p_list.append(process)
 for i in p_list:

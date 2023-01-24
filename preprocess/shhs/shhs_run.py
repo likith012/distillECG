@@ -2,7 +2,7 @@ import os
 import numpy as np
 import argparse
 from tqdm import tqdm
-from multiprocessing import Process
+import multiprocessing
 
 SEED = 1234
 rng = np.random.RandomState(SEED)
@@ -10,7 +10,7 @@ rng = np.random.RandomState(SEED)
 
 # ARGS
 HALF_WINDOW = 3 # Epoch length is HALF_WINDOW*2 + 1
-NUM_CORES = 4
+NUM_CORES = multiprocessing.cpu_count()
 AVAILABLE_MODALITY = ['eeg', 'ecg', 'eog', 'emg', 'emog']
 
 parser = argparse.ArgumentParser()
@@ -52,7 +52,7 @@ def preprocess_subjects(subject_paths, save_path, k, N):
 
 p_list = []
 for k in range(NUM_CORES):
-    process = Process(target=preprocess_subjects, args=(train_subjects, TRAIN_PATH, k, NUM_CORES))
+    process = multiprocessing.Process(target=preprocess_subjects, args=(train_subjects, TRAIN_PATH, k, NUM_CORES))
     process.start()
     p_list.append(process)
 for i in p_list:
@@ -60,7 +60,7 @@ for i in p_list:
 
 p_list = []
 for k in range(NUM_CORES):
-    process = Process(target=preprocess_subjects, args=(test_subjects, TEST_PATH, k, NUM_CORES))
+    process = multiprocessing.Process(target=preprocess_subjects, args=(test_subjects, TEST_PATH, k, NUM_CORES))
     process.start()
     p_list.append(process)
 for i in p_list:
