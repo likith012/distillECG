@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchmetrics import Accuracy, CohenKappa, F1Score
 from torch.nn.functional import softmax
-from models.model import sleep_model, ft_loss
+from models.model import sleep_model
 from sklearn.metrics import balanced_accuracy_score
 from tqdm import tqdm
 from torch.cuda.amp import GradScaler
@@ -19,7 +19,7 @@ class distill_train(nn.Module):
         self.epoch_len = epoch_len
         self.modality = modality
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = sleep_model(2, self.epoch_len).to(self.device)
+        self.model = sleep_model(4, self.epoch_len).to(self.device)
 
         self.weight_decay = 3e-5
         self.lr = 0.001
@@ -76,7 +76,7 @@ class distill_train(nn.Module):
                 'Bal Acc train': bal_acc,
                 'Acc train': acc,
                 'Loss train': epoch_loss.item(),
-                'Epoch train': epoch
+                'Epoch': epoch
             })
 
     def on_test_epoch_end(self, outputs, epoch):
@@ -97,37 +97,45 @@ class distill_train(nn.Module):
                 'Bal Acc test': bal_acc,
                 'Acc test': acc,
                 'Loss test': epoch_loss.item(),
-                'Epoch test': epoch
+                'Epoch': epoch
             })
 
     def fit(self):
-        for epoch in tqdm(range(self.num_epochs), desc="Training"):
+        scaler = GradScaler()
+        for epoch in range(self.num_epochs):
+            
+            print('='*50, end = '\n')
+            print(f"Epoch: {epoch}")
+            print('='*50, end = '\n')
 
             # Training Loop
             train_outputs = {"loss": [], "preds": [], "targets": []}
             self.model.train()
 
-            for batch_idx, batch in enumerate(self.train_loader):
-                loss, outs, y = self.training_step(batch, batch_idx)
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-
+            for batch_idx, batch in tqdm(enumerate(self.train_loader), desc="Train", total=len(self.train_loader)):
+                with torch.cuda.amp.autocast():
+                    loss, outs, y = self.training_step(batch, batch_idx)
+                    
+                self.optimizer.zero_grad(set_to_none=True)
+                scaler.scale(loss).backward()
+                scaler.step(self.optimizer)
+                scaler.update()
+                
                 train_outputs['loss'].append(loss.detach().item())
-                train_outputs['preds'.append(softmax(outs.detach(), dim=1))]
+                train_outputs['preds'].append(softmax(outs.detach(), dim=1))
                 train_outputs['targets'].append(y.detach())
 
-            self.on_train_epoch_end(test_outputs, epoch)
+            self.on_train_epoch_end(train_outputs, epoch)
 
             # Testing Loop
             test_outputs = {"loss": [], "preds": [], "targets": []}
             self.model.eval()
             with torch.no_grad():
-                for batch_idx, batch in enumerate(self.valid_loader):
+                for batch_idx, batch in tqdm(enumerate(self.test_loader), desc="Test", total=len(self.test_loader)):
                     loss, outs, y = self.testing_step(batch, batch_idx)
                     
                     test_outputs['loss'].append(loss.item())
-                    test_outputs['preds'.append(softmax(outs, dim=1))]
+                    test_outputs['preds'].append(softmax(outs, dim=1))
                     test_outputs['targets'].append(y)
 
             self.on_test_epoch_end(test_outputs, epoch)

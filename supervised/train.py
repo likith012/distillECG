@@ -25,7 +25,6 @@ EPOCH_LEN = 7
 DATASET_PATH = '/scratch/hmc'
 DATASET_SUBJECTS = os.listdir(os.path.join(DATASET_PATH, 'subjects_data'))
 SAVE_PATH = './saved_weights'
-metadata_df = pd.load_csv(os.listdir(os.path.join(DATASET_PATH, 'metadata.csv')))
 
 
 wandb = wandb.init(

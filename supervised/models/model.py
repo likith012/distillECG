@@ -55,6 +55,18 @@ class encoder(nn.Module):
         x = self.attention_module(x)
         return x
 
+class projection_head(nn.Module):
+    def __init__(self, input_dim: int = 256):
+        super(projection_head, self).__init__()
+        self.projection_head = nn.Sequential(
+            nn.Linear(input_dim, 128, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Linear(128, 5, bias=True),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.projection_head(x)
+        return x
 
 class sleep_model(nn.Module):
     def __init__(self, input_channels, epoch_len):
@@ -62,7 +74,9 @@ class sleep_model(nn.Module):
 
         self.epoch_len = epoch_len
         self.base_encoder = encoder(input_channels)
-
-    def forward(self, x, y):
+        self.projection_head = projection_head()
+        
+    def forward(self, x):
         x = self.base_encoder(x[:, (self.epoch_len // 2), :, :])
+        x = self.projection_head(x)
         return x

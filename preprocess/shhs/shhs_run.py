@@ -1,85 +1,66 @@
-import os, shutil
-import torch
+import os
 import numpy as np
 import argparse
 from tqdm import tqdm
 
-from torch.nn.functional import interpolate
 
-seed = 1234
-np.random.seed(seed)
+SEED = 1234
+np.random.seed(SEED)
+rng = np.random.RandomState(SEED)
 
+
+# ARGS
+HALF_WINDOW = 3 # Epoch length is HALF_WINDOW*2 + 1
+AVAILABLE_MODALITY = ['eeg', 'ecg', 'eog', 'emg', 'emog']
 
 parser = argparse.ArgumentParser()
-
-parser.add_argument("--dir", type=str, default="/scratch/shhs_outputs",
+parser.add_argument("--dir", type=str, default="/scratch/shhs",
                     help="File path to the PSG and annotation files.")
-
 args = parser.parse_args()
 
-## ARGS
-half_window = 3
-dir = '/scratch/shhs_7'
-##
+DATASET_SUBJECTS = sorted(os.listdir(os.path.join(args.dir, 'subjects_data')))
+DATASET_SUBJECTS = [os.path.join(args.dir, 'subjects_data', f) for f in DATASET_SUBJECTS]
+TRAIN_PATH = os.path.join(args.dir, f'train_{HALF_WINDOW}') 
+TEST_PATH = os.path.join(args.dir, f'test_{HALF_WINDOW}')
 
-data_dir = os.path.join(dir, "shhs_outputs")    
-if not os.path.exists(dir):
-    os.makedirs(dir, exist_ok=True)
-    
-shutil.copytree(args.dir, data_dir)
+dataset_subjects_data = [np.load(f) for f in DATASET_SUBJECTS]
+sub_train = rng.choice(DATASET_SUBJECTS, int(len(DATASET_SUBJECTS)*0.8), replace=False)
+sub_test = list(set(DATASET_SUBJECTS) - set(sub_train))
+train_data = [np.load(f) for f in sub_train]
+test_data = [np.load(f) for f in sub_test]
 
-files = os.listdir(data_dir)
-files = np.array([os.path.join(data_dir, i) for i in files])
-files.sort()
+print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+print(f"Train subjects: {len(sub_train)} \n")
+print(f"Test subjects: {len(sub_test)} \n")
+print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-
-######## pretext files##########
-
-pretext_files = list(np.random.choice(files,264,replace=False))    #change
-
-print("pretext files: ", len(pretext_files))
-
-
-# load files
-os.makedirs(dir+"/pretext/",exist_ok=True)
+if not os.path.exists(TRAIN_PATH): os.makedirs(TRAIN_PATH, exist_ok=True)
+if not os.path.exists(TEST_PATH): os.makedirs(TEST_PATH, exist_ok=True)
 
 cnt = 0
-for file in tqdm(pretext_files):
-    data = np.load(file)
-    x_dat = data["x"]*1000
-    y_dat = data["y"].astype('int')
+for file in tqdm(train_data, desc="Train data processing ..."):
+    y = file["y"].astype('int')
+    num_epochs = file["epoch_length"]
 
-    if x_dat.shape[-1]==2:
-        #mean = np.mean(x_dat.reshape(-1,2),axis=0).reshape(1,1,2)
-        #std = np.std(x_dat.reshape(-1,2),axis=0).reshape(1,1,2)
-        #x_dat = (x_dat-mean)/std
-        x_dat = x_dat.transpose(0,2,1)
+    for i in range(HALF_WINDOW, num_epochs-HALF_WINDOW):
+        epochs_data = {}
+        temp_path = os.path.join(TRAIN_PATH, str(cnt)+".npz")
+        for modality in AVAILABLE_MODALITY:
+            epochs_data[modality] = file[modality][i-HALF_WINDOW: i+HALF_WINDOW+1]
+        epochs_data['y'] = y[i-HALF_WINDOW: i+HALF_WINDOW+1]
+        np.savez(temp_path, **epochs_data)
+        cnt+=1
 
-        for i in range(half_window,x_dat.shape[0]-half_window):
-            dct = {}
-            temp_path = os.path.join(dir+"/pretext/",str(cnt)+".npz")
-            dct['pos'] = interpolate(torch.tensor(x_dat[i-half_window:i+half_window+1]),scale_factor=3000/3750).numpy()
-            dct['y'] = y_dat[i-half_window:i+half_window+1]
-            np.savez(temp_path,**dct)
-            cnt+=1
+cnt = 0
+for file in tqdm(test_data, desc="Test data processing ..."):
+    y_dat = file["y"].astype('int')
+    num_epochs = file["epoch_length"]
 
-
-######## test files##########
-test_files = sorted(list(set(files)-set(pretext_files))) 
-os.makedirs(dir+"/test/",exist_ok=True)
-
-print("test files: ", len(test_files))
-
-for file in tqdm(test_files):
-    new_dat = dict()
-    dat = np.load(file)
-
-    if dat['x'].shape[-1]==2:
-        
-        new_dat['_description'] = [file]
-        new_dat['windows'] = interpolate(torch.tensor(dat['x'].transpose(0,2,1)),scale_factor=3000/3750).numpy()*1000
-        
-        new_dat['y'] = dat['y'].astype('int')
-        
-        temp_path = os.path.join(dir+"/test/",os.path.basename(file))
-        np.savez(temp_path,**new_dat)
+    for i in range(HALF_WINDOW, num_epochs-HALF_WINDOW):
+        epochs_data = {}
+        temp_path = os.path.join(TEST_PATH, str(cnt)+".npz")
+        for modality in AVAILABLE_MODALITY:
+            epochs_data[modality] = file[modality][i-HALF_WINDOW: i+HALF_WINDOW+1]
+        epochs_data['y'] = y[i-HALF_WINDOW: i+HALF_WINDOW+1]
+        np.savez(temp_path, **epochs_data)
+        cnt+=1
