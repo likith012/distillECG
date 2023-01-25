@@ -11,7 +11,7 @@ rng = np.random.RandomState(SEED)
 # ARGS
 HALF_WINDOW = 3 # Epoch length is HALF_WINDOW*2 + 1
 NUM_CORES = multiprocessing.cpu_count()
-AVAILABLE_MODALITY = ['eeg', 'ecg', 'eog', 'emg', 'emog']
+AVAILABLE_MODALITY = ['eeg', 'ecg', 'eog', 'emg']
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dir", type=str, default="/scratch/shhs",
