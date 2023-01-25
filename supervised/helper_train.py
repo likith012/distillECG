@@ -158,4 +158,4 @@ class distill_train(nn.Module):
                     os.path.join(self.save_path, self.exp_name + "_best.pt"),
                     )
                 self.loggr.save(os.path.join(self.save_path, self.exp_name + "_best.pt"))
-                print(f"Best weights saved with accuracy: {acc*100:.2d} at epoch: {epoch}")
+                print(f"Best weights saved with accuracy: {acc*100:.2f} at epoch: {epoch}")
