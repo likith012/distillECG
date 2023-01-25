@@ -37,7 +37,7 @@ if not os.path.exists(TEST_PATH): os.makedirs(TEST_PATH, exist_ok=True)
 def preprocess_subjects(subject_paths, save_path, k, N):
     subjects_data = [np.load(f) for i, f in enumerate(subject_paths) if i%N==k]
     cnt = 0
-    for file in tqdm(subjects_data, desc="Data processing ..."):
+    for file in tqdm(subjects_data, desc="Data processing ...", total=len(subject_paths)):
         y = file["y"].astype('int')
         num_epochs = file["epoch_length"]
 
