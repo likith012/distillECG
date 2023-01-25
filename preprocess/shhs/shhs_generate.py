@@ -42,9 +42,9 @@ label_mapping = {
     "Sleep stage R": 4,
 }
 channel_mapping = {
-    'eeg': ['EEG', 'EEG(sec)'],
+    'eeg': ['EEG'],
     'ecg': ['ECG'],
-    'eog': ['EOG(L)', 'EOG(R)'],
+    'eog': ['EOG'],
     'emg': ['EMG'],
 }
 
@@ -166,7 +166,7 @@ def __get_channels(raw, ann):
 def preprocess_dataset(raw_paths, ann_paths, k, N):
     raw_paths_core = [f for i, f in enumerate(raw_paths) if i%N==k]
     ann_paths_core = [f for i, f in enumerate(ann_paths) if i%N==k]
-    for raw, ann in tqdm(zip(raw_paths_core, ann_paths_core), desc="SHHS dataset preprocessing ...", total=len(raw_paths)):
+    for raw, ann in tqdm(zip(raw_paths_core, ann_paths_core), desc="SHHS dataset preprocessing ...", total=len(raw_paths_core)):
         channels_data, subject_num = __get_channels(raw, ann)    
         subjects_save_path = os.path.join(SHHS_SAVE_PATH, f"{subject_num}.npz")
         np.savez(subjects_save_path, **channels_data)

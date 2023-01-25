@@ -37,13 +37,13 @@ if not os.path.exists(TEST_PATH): os.makedirs(TEST_PATH, exist_ok=True)
 def preprocess_subjects(subject_paths, save_path, k, N):
     subjects_data = [np.load(f) for i, f in enumerate(subject_paths) if i%N==k]
     cnt = 0
-    for file in tqdm(subjects_data, desc="Data processing ...", total=len(subject_paths)):
+    for file in tqdm(subjects_data, desc="Data processing ...", total=len(subjects_data)):
         y = file["y"].astype('int')
         num_epochs = file["epoch_length"]
 
         for i in range(HALF_WINDOW, num_epochs-HALF_WINDOW):
             epochs_data = {}
-            temp_path = os.path.join(save_path, str(cnt)+".npz")
+            temp_path = os.path.join(save_path, f"{k+1}_{cnt}.npz")
             for modality in AVAILABLE_MODALITY:
                 epochs_data[modality] = file[modality][i-HALF_WINDOW: i+HALF_WINDOW+1]
             epochs_data['y'] = y[i-HALF_WINDOW: i+HALF_WINDOW+1]
