@@ -37,9 +37,9 @@ ann_paths = [os.path.join(SHHS_EVENTS_PATH, f'{f}-profusion.xml') for f in subje
 label_mapping = {  
     "Sleep stage W": 0,
     "Sleep stage N1": 1,
-    "Sleep stage N2": 2,
-    "Sleep stage N3": 3,
-    "Sleep stage R": 4,
+    "Sleep stage N2": 1,
+    "Sleep stage N3": 2,
+    "Sleep stage R": 3,
 }
 channel_mapping = {
     'eeg': ['EEG'],

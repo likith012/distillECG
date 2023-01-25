@@ -61,7 +61,7 @@ class projection_head(nn.Module):
         self.projection_head = nn.Sequential(
             nn.Linear(input_dim, 128, bias=True),
             nn.ReLU(inplace=True),
-            nn.Linear(128, 5, bias=True),
+            nn.Linear(128, 4, bias=True),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
