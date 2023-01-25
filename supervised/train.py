@@ -17,6 +17,7 @@ DATASET = 'shhs'
 MODALITY = 'eeg'
 EXPERIMENT_NAME = f'supervised_{DATASET}+{MODALITY}'
 INPUT_CHANNELS = 1
+NUM_CLASSES = 4
 BATCH_SIZE = 256
 EPOCH_LEN = 7
 
@@ -68,7 +69,7 @@ test_loader = DataLoader(
     num_workers=4,
 )
 
-model = distill_train(EXPERIMENT_NAME, SAVE_PATH, train_loader, test_loader, wandb, EPOCH_LEN, INPUT_CHANNELS)
+model = distill_train(EXPERIMENT_NAME, SAVE_PATH, train_loader, test_loader, wandb, EPOCH_LEN, INPUT_CHANNELS, NUM_CLASSES)
 wandb.watch([model], log="all", log_freq=500)
 
 model.fit()

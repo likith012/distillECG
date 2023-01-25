@@ -12,10 +12,11 @@ from torch.cuda.amp import GradScaler
 
 class distill_train(nn.Module):
 
-    def __init__(self, EXPERIMENT_NAME, SAVE_PATH, train_loader, test_loader, wandb_logger, epoch_len, input_channels):
+    def __init__(self, EXPERIMENT_NAME, SAVE_PATH, train_loader, test_loader, wandb_logger, epoch_len, input_channels, num_class):
         super(distill_train, self).__init__()
 
         self.epoch_len = epoch_len
+        self.num_class = num_class
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = sleep_model(input_channels, self.epoch_len).to(self.device)
         self.exp_name = EXPERIMENT_NAME
@@ -72,9 +73,9 @@ class distill_train(nn.Module):
         self.scheduler.step(epoch_loss)
         
         class_preds = epoch_preds.argmax(dim=1)
-        acc = Accuracy(task="multiclass", num_classes=5).to(self.device)(epoch_preds, epoch_targets)
-        f1_score = F1Score(task="multiclass", num_classes=5, average="macro").to(self.device)(epoch_preds, epoch_targets)
-        kappa = CohenKappa(task="multiclass", num_classes=5).to(self.device)(epoch_preds, epoch_targets)
+        acc = Accuracy(task="multiclass", num_classes=self.num_class).to(self.device)(epoch_preds, epoch_targets)
+        f1_score = F1Score(task="multiclass", num_classes=self.num_class, average="macro").to(self.device)(epoch_preds, epoch_targets)
+        kappa = CohenKappa(task="multiclass", num_classes=self.num_class).to(self.device)(epoch_preds, epoch_targets)
         bal_acc = balanced_accuracy_score(epoch_targets.cpu().numpy(), class_preds.cpu().numpy())
 
         self.loggr.log({
@@ -93,9 +94,9 @@ class distill_train(nn.Module):
         epoch_loss = torch.hstack([torch.tensor(x) for x in outputs['loss']]).mean()
         
         class_preds = epoch_preds.argmax(dim=1)
-        acc = Accuracy(task="multiclass", num_classes=5).to(self.device)(epoch_preds, epoch_targets)
-        f1_score = F1Score(task="multiclass", num_classes=5, average="macro").to(self.device)(epoch_preds, epoch_targets)
-        kappa = CohenKappa(task="multiclass", num_classes=5).to(self.device)(epoch_preds, epoch_targets)
+        acc = Accuracy(task="multiclass", num_classes=self.num_class).to(self.device)(epoch_preds, epoch_targets)
+        f1_score = F1Score(task="multiclass", num_classes=self.num_class, average="macro").to(self.device)(epoch_preds, epoch_targets)
+        kappa = CohenKappa(task="multiclass", num_classes=self.num_class).to(self.device)(epoch_preds, epoch_targets)
         bal_acc = balanced_accuracy_score(epoch_targets.cpu().numpy(), class_preds.cpu().numpy())
 
         self.loggr.log({
