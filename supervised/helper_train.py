@@ -18,7 +18,7 @@ class distill_train(nn.Module):
         self.epoch_len = epoch_len
         self.num_class = num_class
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = sleep_model(input_channels, self.epoch_len).to(self.device)
+        self.model = sleep_model(input_channels, self.epoch_len, self.num_class).to(self.device)
         self.exp_name = EXPERIMENT_NAME
         self.save_path = SAVE_PATH
 
@@ -159,4 +159,5 @@ class distill_train(nn.Module):
                     os.path.join(self.save_path, self.exp_name + "_best.pt"),
                     )
                 self.loggr.save(os.path.join(self.save_path, self.exp_name + "_best.pt"))
-                print(f"Best weights saved with accuracy: {acc*100:.2f} at epoch: {epoch}")
+                self.best_accuracy = acc
+                print(f"Best weights saved with accuracy: {self.best_accuracy*100:.2f} at epoch: {epoch}")
