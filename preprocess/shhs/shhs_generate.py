@@ -44,7 +44,7 @@ label_mapping = {
 channel_mapping = {
     'eeg': ['EEG'],
     'ecg': ['ECG'],
-    'eog': ['EOG'],
+    'eog': ['EOG(L)', 'EOG(R)'],
     'emg': ['EMG'],
 }
 
