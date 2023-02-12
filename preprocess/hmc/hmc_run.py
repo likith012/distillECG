@@ -1,139 +1,73 @@
 import os
 import numpy as np
+import argparse
 from tqdm import tqdm
+import multiprocessing
 
-import mne
-from braindecode.preprocessing.preprocess import preprocess, Preprocessor, zscore
-from braindecode.preprocessing.windowers import create_windows_from_events
-from braindecode.datasets import BaseConcatDataset, BaseDataset
-
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
+SEED = 1234
+rng = np.random.RandomState(SEED)
 
 
-HMC_PATH = '/scratch/hmc/recordings'
+# ARGS
+HALF_WINDOW = 3 # Epoch length is HALF_WINDOW*2 + 1
+NUM_CORES = multiprocessing.cpu_count()
+AVAILABLE_MODALITY = ['eeg', 'ecg', 'eog', 'emg']
 
-window_size = 30
-sfreq = 100
-window_size_samples = window_size*sfreq
-mapping = {  
-    "Sleep stage W": 0,
-    "Sleep stage N1": 1,
-    "Sleep stage N2": 2,
-    "Sleep stage N3": 3,
-    "Sleep stage R": 4,
-}
+parser = argparse.ArgumentParser()
+parser.add_argument("--dir", type=str, default="/scratch/hmc",
+                    help="File path to the PSG and annotation files.")
+args = parser.parse_args()
 
+DATASET_SUBJECTS = sorted(os.listdir(os.path.join(args.dir, 'subjects_data')))
+DATASET_SUBJECTS = [os.path.join(args.dir, 'subjects_data', f) for f in DATASET_SUBJECTS]
+TRAIN_PATH = os.path.join(args.dir, f'train_{HALF_WINDOW*2 +1}') 
+TEST_PATH = os.path.join(args.dir, f'test_{HALF_WINDOW*2 + 1}')
 
-class HMCSleepStaging(BaseConcatDataset):
-    
-    def __init__(
-        self,
-        hmc_path=None,
-        subject_ids=None,
-        preload=False,
-        crop_wake_mins=0,
-        crop=None,
-    ):
-        if subject_ids is None:
-            subject_ids = range(1, 155)
-        if hmc_path is None:
-            raise Exception("Please provide path")
-        
-        self.raw_files, self.edf_files = [], []       
-        self._fetch_data(subject_ids, hmc_path)
+train_subjects = rng.choice(DATASET_SUBJECTS, int(len(DATASET_SUBJECTS)*0.8), replace=False)
+test_subjects = list(set(DATASET_SUBJECTS) - set(train_subjects))
 
-        all_base_ds = list()
-        for raw_fname, ann_fname in zip(self.raw_files, self.edf_files):
-            raw, desc = self._load_raw(
-                raw_fname,
-                ann_fname,
-                preload=preload,
-                crop_wake_mins=crop_wake_mins,
-                crop=crop
-            )
-            base_ds = BaseDataset(raw, desc)
-            all_base_ds.append(base_ds)
-        super().__init__(all_base_ds)
-    
-    def _fetch_data(
-        self,
-        subject_ids,
-        hmc_path,
-    ):
-        hmc_files = os.listdir(hmc_path)
-        for subject in subject_ids:
-            current_file = f"SN{subject:03d}.edf"
-            if  current_file in hmc_files:
-                self.raw_files.append(os.path.join(hmc_path, current_file))
-                self.edf_files.append(os.path.join(hmc_path, f"SN{subject:03d}_sleepscoring.edf"))        
-    
-    @staticmethod
-    def _load_raw(
-        raw_fname,
-        ann_fname,
-        preload,
-        crop_wake_mins,
-        crop,
-    ):
-        raw = mne.io.read_raw_edf(raw_fname, preload=preload)
-        annots = mne.read_annotations(ann_fname)
-        raw.set_annotations(annots, emit_warning=False)
-        raw.resample(sfreq, npad="auto")
+print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+print(f"Train subjects: {len(train_subjects)} \n")
+print(f"Test subjects: {len(test_subjects)} \n")
+print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-        if crop_wake_mins > 0:
-            # Find first and last sleep stages
-            mask = [x[-1] in ["1", "2", "3", "R"] for x in annots.description]
-            sleep_event_inds = np.where(mask)[0]
+if not os.path.exists(TRAIN_PATH): os.makedirs(TRAIN_PATH, exist_ok=True)
+if not os.path.exists(TEST_PATH): os.makedirs(TEST_PATH, exist_ok=True)
 
-            # Crop raw
-            tmin = annots[int(sleep_event_inds[0])]["onset"] - crop_wake_mins * 60
-            tmax = annots[int(sleep_event_inds[-1])]["onset"] + crop_wake_mins * 60
-            raw.crop(tmin=max(tmin, raw.times[0]), tmax=min(tmax, raw.times[-1]))
+def preprocess_subjects(subject_paths, save_path, k, N):
+    subjects_data = [np.load(f) for i, f in enumerate(subject_paths) if i%N==k]
+    cnt = 0
+    for file in tqdm(subjects_data, desc="Data processing ...", total=len(subjects_data)):
+        y = file["y"].astype('int')
+        eeg = file['eeg']
+        eog = file['eog']
+        emg = file['emg']
+        ecg = file['ecg']
+        num_epochs = file["epoch_length"]
 
-        if crop is not None:
-            raw.crop(*crop)
+        for i in range(HALF_WINDOW, num_epochs-HALF_WINDOW):
+            epochs_data = {}
+            temp_path = os.path.join(save_path, f"{k+1}_{cnt}.npz")
+            epochs_data['eeg'] = eeg[i-HALF_WINDOW: i+HALF_WINDOW+1]
+            epochs_data['eog'] = eog[i-HALF_WINDOW: i+HALF_WINDOW+1]
+            epochs_data['ecg'] = ecg[i-HALF_WINDOW: i+HALF_WINDOW+1]
+            epochs_data['emg'] = emg[i-HALF_WINDOW: i+HALF_WINDOW+1]
+            epochs_data['y'] = y[i-HALF_WINDOW: i+HALF_WINDOW+1]
+            np.savez(temp_path, **epochs_data)
+            cnt+=1
 
-        raw_basename = os.path.basename(raw_fname)
-        subj_nb = int(raw_basename[2:5])
-        desc = pd.Series({"subject_id": subj_nb,}, name="")
-        return raw, desc
+p_list = []
+for k in range(NUM_CORES):
+    process = multiprocessing.Process(target=preprocess_subjects, args=(train_subjects, TRAIN_PATH, k, NUM_CORES))
+    process.start()
+    p_list.append(process)
+for i in p_list:
+    i.join()
 
-    
-def __get_epochs(windows_subject):
-    epochs_data = []
-    for epoch in windows_subject.windows:
-        epochs_data.append(epoch)
-    epochs_data = np.stack(epochs_data, axis=0) # Shape of (num_epochs, num_channels, num_sample_points)
-    return epochs_data
-
-
-hmc_dataset = HMCSleepStaging(hmc_path=HMC_PATH)
-hmc_windows_dataset = create_windows_from_events(
-                        hmc_dataset,
-                        window_size_samples=window_size_samples,
-                        window_stride_samples=window_size_samples,
-                        preload=False,
-                        mapping=mapping,
-                    )
-preprocess(hmc_windows_dataset, [Preprocessor(zscore)])
-
-HMC_SAVE_PATH = os.path.join(os.path.split(HMC_PATH)[0], 'subjects_data')
-if not os.path.exists(HMC_SAVE_PATH):
-    os.makedirs(HMC_SAVE_PATH, exist_ok=True)
-
-for windows_subject in tqdm(hmc_windows_dataset.datasets, desc="HMC dataset preprocessing ..."):
-    hmc_subject_data = __get_epochs(windows_subject)
-
-    subjects_save_path = os.path.join(HMC_SAVE_PATH, f"{windows_subject.description['subject_id']:03d}.npz")
-    np.savez(subjects_save_path, 
-             eeg=hmc_subject_data[:, :4], 
-             emg=hmc_subject_data[:, 4:5],
-             eog=hmc_subject_data[:, 5:7],
-             emog=hmc_subject_data[:, 4:7],
-             ecg=hmc_subject_data[:, 7:],
-             y=windows_subject.y,
-             subject_id=windows_subject.description['subject_id'],
-             epoch_length=len(windows_subject),
-            )
-    
+p_list = []
+for k in range(NUM_CORES):
+    process = multiprocessing.Process(target=preprocess_subjects, args=(test_subjects, TEST_PATH, k, NUM_CORES))
+    process.start()
+    p_list.append(process)
+for i in p_list:
+    i.join()
