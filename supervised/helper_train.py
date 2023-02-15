@@ -12,13 +12,13 @@ from torch.cuda.amp import GradScaler
 
 class distill_train(nn.Module):
 
-    def __init__(self, EXPERIMENT_NAME, SAVE_PATH, train_loader, test_loader, wandb_logger, epoch_len, input_channels, num_class):
+    def __init__(self, EXPERIMENT_NAME, SAVE_PATH, train_loader, test_loader, wandb_logger, epoch_len, input_channels, num_class, do_context=False):
         super(distill_train, self).__init__()
 
         self.epoch_len = epoch_len
         self.num_class = num_class
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = sleep_model(input_channels, self.epoch_len, self.num_class).to(self.device)
+        self.model = sleep_model(input_channels, self.epoch_len, self.num_class, do_context).to(self.device)
         self.exp_name = EXPERIMENT_NAME
         self.save_path = SAVE_PATH
 

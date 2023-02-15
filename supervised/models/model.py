@@ -70,7 +70,7 @@ class projection_head(nn.Module):
         return x
 
 class sleep_model(nn.Module):
-    def __init__(self, input_channels, epoch_len, num_class, do_context=False):
+    def __init__(self, input_channels, epoch_len, num_class, do_context):
         super(sleep_model, self).__init__()
 
         self.epoch_len = epoch_len

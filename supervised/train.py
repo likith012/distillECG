@@ -20,6 +20,7 @@ INPUT_CHANNELS = 1
 NUM_CLASSES = 4
 BATCH_SIZE = 256
 EPOCH_LEN = 7
+DO_CONTEXT = True
 
 DATASET_PATH = f'/scratch/{DATASET}'
 DATASET_SUBJECTS = os.listdir(os.path.join(DATASET_PATH, 'subjects_data'))
@@ -69,7 +70,7 @@ test_loader = DataLoader(
     num_workers=4,
 )
 
-model = distill_train(EXPERIMENT_NAME, SAVE_PATH, train_loader, test_loader, wandb, EPOCH_LEN, INPUT_CHANNELS, NUM_CLASSES)
+model = distill_train(EXPERIMENT_NAME, SAVE_PATH, train_loader, test_loader, wandb, EPOCH_LEN, INPUT_CHANNELS, NUM_CLASSES, DO_CONTEXT)
 wandb.watch([model], log="all", log_freq=500)
 
 model.fit()
