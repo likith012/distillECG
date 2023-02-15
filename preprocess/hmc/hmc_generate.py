@@ -44,10 +44,10 @@ label_mapping = {
     "Sleep stage R": 3,
 }
 channel_mapping = {
-    'eeg': ['EEG'],
+    'eeg': ['EEG F4-M1', 'EEG C4-M1', 'EEG O2-M1', 'EEG C3-M2'],
     'ecg': ['ECG'],
-    'eog': ['EOG(L)', 'EOG(R)'],
-    'emg': ['EMG'],
+    'eog': ['EOG E1-M2', 'EOG E2-M2'],
+    'emg': ['EMG chin'],
 }
 
 class HMCSleepStaging(BaseConcatDataset):

@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch
 
 from .resnet1d import BaseNet
+from .tfr import Transformer
 
 
 class attention(nn.Module):
@@ -69,14 +70,24 @@ class projection_head(nn.Module):
         return x
 
 class sleep_model(nn.Module):
-    def __init__(self, input_channels, epoch_len, num_class):
+    def __init__(self, input_channels, epoch_len, num_class, do_context=False):
         super(sleep_model, self).__init__()
 
         self.epoch_len = epoch_len
+        self.do_context = do_context
         self.base_encoder = encoder(input_channels)
+        self.tfmr = Transformer(256, 4, 4, 256, dropout=0.1)
         self.projection_head = projection_head(num_class)
         
     def forward(self, x):
-        x = self.base_encoder(x[:, (self.epoch_len // 2), :, :])
-        x = self.projection_head(x)
+        if not self.do_context:
+            x = self.base_encoder(x[:, (self.epoch_len // 2), :, :])
+            x = self.projection_head(x)
+        else:
+            surr = []
+            for i in range(self.epoch_len):
+                surr.append(self.base_encoder(x[:, i, :, :])) # 128, 1, 3000
+            surr = torch.stack(surr, dim=1)
+            x = self.tfmr(surr)
+            x = self.projection_head(x)
         return x
